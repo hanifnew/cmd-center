@@ -4,6 +4,7 @@ ultralytics==8.0.196
 numpy==1.26.4
 pillow==10.4.0
 protobuf==4.25.7
-torch==2.2.0
-torchvision==0.17.0
+--find-links https://download.pytorch.org/whl/cpu
+torch==2.2.0+cpu
+torchvision==0.17.0+cpu
 pytube==15.0.0
