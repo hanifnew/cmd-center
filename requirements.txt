@@ -1,11 +1,11 @@
-streamlit==1.32.0
-opencv-python-headless==4.9.0.80
+streamlit==1.31.1
+opencv-python-headless==4.8.1.78
 ultralytics==8.0.196
-numpy==1.26.4
-pillow==10.4.0
-protobuf==4.25.7
+numpy==1.24.3
+pillow==10.0.0
+protobuf==4.24.4
 --find-links https://download.pytorch.org/whl/cpu
-torch==2.1.2+cpu
-torchvision==0.16.2+cpu
+torch==2.0.1+cpu
+torchvision==0.15.2+cpu
 pytube==15.0.0
 streamlit-webrtc==0.47.1
