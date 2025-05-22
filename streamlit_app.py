@@ -78,16 +78,7 @@ video_placeholder = st.empty()
 @st.cache_resource
 def load_model():
     try:
-        # Patch torch.load to always use weights_only=False
-        orig_torch_load = torch.load
-        def patched_torch_load(*args, **kwargs):
-            kwargs['weights_only'] = False
-            return orig_torch_load(*args, **kwargs)
-        torch.load = patched_torch_load
-
         model = YOLO('weights/weights.pt', task='detect')
-
-        torch.load = orig_torch_load  # Restore original
         return model
     except Exception as e:
         st.error(f"Error loading model: {str(e)}")
