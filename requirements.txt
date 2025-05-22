@@ -5,7 +5,7 @@ numpy==1.26.4
 pillow==10.4.0
 protobuf==4.25.7
 --find-links https://download.pytorch.org/whl/cpu
-torch==2.2.0+cpu
-torchvision==0.17.0+cpu
+torch==2.1.2+cpu
+torchvision==0.16.2+cpu
 pytube==15.0.0
 streamlit-webrtc==0.47.1

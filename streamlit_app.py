@@ -80,9 +80,13 @@ def load_model():
         return model
     except Exception as e:
         st.error(f"Error loading model: {str(e)}")
-        st.stop()
+        return None
 
 model = load_model()
+
+if model is None:
+    st.error("Failed to load the model. Please check if the model file exists and try again.")
+    st.stop()
 
 # Color map for classes
 class_colors = {
@@ -104,37 +108,45 @@ class VideoProcessor(VideoProcessorBase):
         self.model = model
 
     def recv(self, frame):
-        img = frame.to_ndarray(format="bgr24")
-        
-        # Run detection
-        results = self.model.predict(img, conf=0.4)
-        annotated_frame = img.copy()
-        
-        for result in results:
-            boxes = result.boxes
-            for box in boxes:
-                cls = int(box.cls[0])
-                conf = float(box.conf[0])
-                class_name = result.names[cls]
-                # Skip mask_weared_incorrect class
-                if class_name == 'mask_weared_incorrect':
-                    continue
-                x1, y1, x2, y2 = map(int, box.xyxy[0])
-                color = class_colors.get(class_name, (200, 200, 200))
-                draw_rounded_rectangle(annotated_frame, (x1, y1), (x2, y2), color, thickness=3, r=12)
-                label = f'{class_name} {conf:.2f}'
-                draw_label(annotated_frame, label, (x1, y1), color)
-        
-        return annotated_frame
+        try:
+            img = frame.to_ndarray(format="bgr24")
+            
+            # Run detection
+            results = self.model.predict(img, conf=0.4)
+            annotated_frame = img.copy()
+            
+            for result in results:
+                boxes = result.boxes
+                for box in boxes:
+                    cls = int(box.cls[0])
+                    conf = float(box.conf[0])
+                    class_name = result.names[cls]
+                    # Skip mask_weared_incorrect class
+                    if class_name == 'mask_weared_incorrect':
+                        continue
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    color = class_colors.get(class_name, (200, 200, 200))
+                    draw_rounded_rectangle(annotated_frame, (x1, y1), (x2, y2), color, thickness=3, r=12)
+                    label = f'{class_name} {conf:.2f}'
+                    draw_label(annotated_frame, label, (x1, y1), color)
+            
+            return annotated_frame
+        except Exception as e:
+            st.error(f"Error processing frame: {str(e)}")
+            return frame.to_ndarray(format="bgr24")
 
-# Initialize WebRTC streamer
-webrtc_ctx = webrtc_streamer(
-    key="object-detection",
-    mode=WebRtcMode.SENDRECV,
-    rtc_configuration={
-        "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
-    },
-    video_processor_factory=VideoProcessor,
-    media_stream_constraints={"video": True, "audio": False},
-    async_processing=True,
-) 
+# Initialize WebRTC streamer with error handling
+try:
+    webrtc_ctx = webrtc_streamer(
+        key="object-detection",
+        mode=WebRtcMode.SENDRECV,
+        rtc_configuration={
+            "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
+        },
+        video_processor_factory=VideoProcessor,
+        media_stream_constraints={"video": True, "audio": False},
+        async_processing=True,
+    )
+except Exception as e:
+    st.error(f"Error initializing WebRTC: {str(e)}")
+    st.info("Please make sure your browser supports WebRTC and you have granted camera permissions.") 
