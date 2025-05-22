@@ -7,6 +7,7 @@ import torch
 from ultralytics.nn.tasks import DetectionModel
 from torch.nn import Sequential, Module, ModuleList, Conv2d, BatchNorm2d, SiLU, Upsample, MaxPool2d
 from ultralytics.nn.modules import C2f, SPPF
+from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, WebRtcMode
 try:
     from ultralytics.nn.modules.conv import Conv
 except ImportError:
@@ -71,9 +72,6 @@ st.set_page_config(
 # Title
 st.title("MBG Command Center - Live Detection")
 
-# Create a placeholder for the video feed
-video_placeholder = st.empty()
-
 # Load the YOLOv8 model
 @st.cache_resource
 def load_model():
@@ -101,47 +99,42 @@ class_colors = {
     'lizard': (0, 128, 128)        # Teal
 }
 
-# Initialize video capture with webcam
-cap = cv2.VideoCapture(0)  # Use default webcam
-if not cap.isOpened():
-    st.error("Error: Could not open webcam")
-    st.stop()
+class VideoProcessor(VideoProcessorBase):
+    def __init__(self):
+        self.model = model
 
-# Main loop
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        # Video ended, reset to beginning
-        cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-        continue
-    
-    # Resize frame for better performance
-    frame = cv2.resize(frame, (1280, 720))  
-    
-    # Run detection
-    results = model.predict(frame, conf=0.4)
-    annotated_frame = frame.copy()
-    
-    for result in results:
-        boxes = result.boxes
-        for box in boxes:
-            cls = int(box.cls[0])
-            conf = float(box.conf[0])
-            class_name = result.names[cls]
-            # Skip mask_weared_incorrect class
-            if class_name == 'mask_weared_incorrect':
-                continue
-            x1, y1, x2, y2 = map(int, box.xyxy[0])
-            color = class_colors.get(class_name, (200, 200, 200))
-            draw_rounded_rectangle(annotated_frame, (x1, y1), (x2, y2), color, thickness=3, r=12)
-            label = f'{class_name} {conf:.2f}'
-            draw_label(annotated_frame, label, (x1, y1), color)
-    
-    # Display the video feed
-    video_placeholder.image(annotated_frame, channels="BGR", use_column_width=True)
-    
-    # Add a small delay to prevent overwhelming the system
-    time.sleep(0.01)
+    def recv(self, frame):
+        img = frame.to_ndarray(format="bgr24")
+        
+        # Run detection
+        results = self.model.predict(img, conf=0.4)
+        annotated_frame = img.copy()
+        
+        for result in results:
+            boxes = result.boxes
+            for box in boxes:
+                cls = int(box.cls[0])
+                conf = float(box.conf[0])
+                class_name = result.names[cls]
+                # Skip mask_weared_incorrect class
+                if class_name == 'mask_weared_incorrect':
+                    continue
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                color = class_colors.get(class_name, (200, 200, 200))
+                draw_rounded_rectangle(annotated_frame, (x1, y1), (x2, y2), color, thickness=3, r=12)
+                label = f'{class_name} {conf:.2f}'
+                draw_label(annotated_frame, label, (x1, y1), color)
+        
+        return annotated_frame
 
-# Clean up
-cap.release() 
+# Initialize WebRTC streamer
+webrtc_ctx = webrtc_streamer(
+    key="object-detection",
+    mode=WebRtcMode.SENDRECV,
+    rtc_configuration={
+        "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
+    },
+    video_processor_factory=VideoProcessor,
+    media_stream_constraints={"video": True, "audio": False},
+    async_processing=True,
+) 

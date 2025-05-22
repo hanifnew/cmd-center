@@ -8,3 +8,4 @@ protobuf==4.25.7
 torch==2.2.0+cpu
 torchvision==0.17.0+cpu
 pytube==15.0.0
+streamlit-webrtc==0.47.1
